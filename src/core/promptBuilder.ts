@@ -54,7 +54,9 @@ export function buildSystemPrompt({
   // Layer 4: behaviour rules
   parts.push(
     'Keep responses concise and conversational — this is a chat widget. ' +
-    'Use markdown only for code blocks and short lists.'
+    'Use markdown only for code blocks and short lists. ' +
+    'Never generate placeholder links like [link to X] or [click here]. ' +
+    'If you need to direct the user somewhere, refer to the page by name instead, e.g. "go to the Billing page" or "check Settings → Team".'
   )
 
   return parts.join('\n\n')
