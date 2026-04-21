@@ -39,7 +39,8 @@ export function MessageList({ messages }: { messages: Message[] }) {
         gap: 10,
       }}
     >
-      {messages.map((msg, i) => (
+      {messages.filter(m => m.role !== 'system').map((msg, i) => (
+
         <div
           key={i}
           style={{
