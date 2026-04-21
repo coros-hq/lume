@@ -1,6 +1,6 @@
 {
   "name": "@ovt2/lume",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Embeddable AI assistant bubble for any React app",
   "type": "module",
   "main": "./dist/index.cjs.js",
