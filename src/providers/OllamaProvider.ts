@@ -8,6 +8,19 @@ interface StreamOptions {
   onError: (err: Error) => void;
 }
 
+const OLLAMA_BASE = "http://localhost:11434";
+
+export async function checkOllamaConnection(): Promise<boolean> {
+  try {
+    const res = await fetch(`${OLLAMA_BASE}/api/tags`, {
+      signal: AbortSignal.timeout(2000),
+    })
+    return res.ok;
+  }catch {
+    return false;
+  }
+}
+
 export function streamFromOllama({
   model,
   messages,
@@ -17,7 +30,7 @@ export function streamFromOllama({
 }: StreamOptions): AbortController {
   const controller = new AbortController();
 
-  fetch("http://localhost:11434/api/chat", {
+  fetch(`${OLLAMA_BASE}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     signal: controller.signal,

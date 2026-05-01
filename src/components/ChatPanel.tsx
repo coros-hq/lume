@@ -1,9 +1,18 @@
-import { useState, KeyboardEvent, forwardRef, useImperativeHandle } from "react";
+import {
+  useState,
+  KeyboardEvent,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { Header } from "./chat/Header";
 import { MessageList } from "./chat/MessageArea";
 import { InputBar } from "./chat/InputBar";
 import { useAssistant } from "../hooks/useAssistant";
 import { ErrorStrip } from "./ErrorStrip";
+import { ConfirmationCard } from "./ConfirmationCard";
+import { KnowledgeChunk } from "../core/ragScorer";
+import { Action, ActionCall, ComponentDefinition } from "../types";
+import { useOllamaStatus } from "../hooks/useOllamaStatus";
 
 interface ChatPanelProps {
   isOpen: boolean;
@@ -14,6 +23,10 @@ interface ChatPanelProps {
   position: "bottom-right" | "bottom-left" | "top-right" | "top-left";
   title: string;
   context?: Record<string, string | number | boolean | null | undefined>;
+  knowledgeBase?: KnowledgeChunk[];
+  actions?: Action[];
+  components?: ComponentDefinition[]; // ← added
+  debug?: boolean;
 }
 
 interface ChatPanelHandle {
@@ -23,12 +36,43 @@ interface ChatPanelHandle {
 
 export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(
   function ChatPanel(
-    { isOpen, onClose, model, systemPrompt, context, accentColor, position, title },
+    {
+      isOpen,
+      onClose,
+      model,
+      systemPrompt,
+      context,
+      accentColor,
+      position,
+      title,
+      knowledgeBase,
+      actions,
+      components, // ← added
+      debug = false
+    },
     ref
   ) {
     const [input, setInput] = useState("");
-    const { messages, isStreaming, error, send, clearHistory, pushContext } =
-      useAssistant({ model, systemPrompt, context });
+    const {
+      messages,
+      isStreaming,
+      error,
+      confirmation,
+      send,
+      clearHistory,
+      pushContext,
+      confirmAction,
+      cancelAction,
+    } = useAssistant({
+      model,
+      systemPrompt,
+      context,
+      knowledgeBase,
+      actions,
+      components,
+    });
+
+    const ollamaStatus = useOllamaStatus()
 
     useImperativeHandle(ref, () => ({
       pushContext,
@@ -81,8 +125,29 @@ export const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(
           onClose={onClose}
           onClear={clearHistory}
           hasMessages={messages.filter((m) => m.role !== "system").length > 0}
+          status={ollamaStatus}
         />
-        <MessageList messages={messages} />
+
+        <MessageList
+          messages={messages}
+          isStreaming={isStreaming}
+          components={components ?? []}
+          debug={debug}
+        />
+
+
+{(confirmation.status === 'pending' || confirmation.status === 'executing') && confirmation.action && (
+  <div style={{ padding: '0 12px 10px' }}>
+    <ConfirmationCard
+      call={confirmation.call as ActionCall}
+      action={confirmation.action}
+      onConfirm={confirmAction}
+      onCancel={cancelAction}
+      isExecuting={confirmation.status === 'executing'}
+    />
+  </div>
+)}
+
         {error && <ErrorStrip message={error} />}
         <InputBar
           value={input}
@@ -101,9 +166,13 @@ export default ChatPanel;
 
 function getPanelPositionStyle(position: string): React.CSSProperties {
   switch (position) {
-    case "bottom-left": return { bottom: 88, left: 24 };
-    case "top-right":   return { top: 88, right: 24 };
-    case "top-left":    return { top: 88, left: 24 };
-    default:            return { bottom: 88, right: 24 };
+    case "bottom-left":
+      return { bottom: 88, left: 24 };
+    case "top-right":
+      return { top: 88, right: 24 };
+    case "top-left":
+      return { top: 88, left: 24 };
+    default:
+      return { bottom: 88, right: 24 };
   }
 }
